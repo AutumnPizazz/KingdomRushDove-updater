@@ -1,7 +1,8 @@
 // Package assetindex 解析服务端/本地的 _assets/assets_index.lua，并做增量比对。
 //
 // assets_index.lua 的形态是 `return { ["相对路径"] = {字节数, "fnv1a-32-哈希"}, ... }`，
-// 哈希算法与游戏内置更新器 (dove_modules/updater/update_manager.lua 的 file_hash) 完全一致：
+// 哈希算法与 KingdomRushDove（https://github.com/CrazySpottedDove/KingdomRushDove）
+// 内置更新器的 file_hash 完全一致，细节如下：
 // FNV-1a 32 位：先读前 4096 字节，文件大于 8192 字节时再读末 4096 字节，最后混入文件大小。
 package assetindex
 

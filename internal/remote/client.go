@@ -1,6 +1,7 @@
 // Package remote 封装更新服务端协议（提交查询、打包下载、单文件回退）。
 //
-// 协议与游戏内置更新器 dove_modules/updater/update_manager.lua 保持一致：
+// 协议抄自 KingdomRushDove（https://github.com/CrazySpottedDove/KingdomRushDove）
+// 的 dove_modules/updater/update_manager.lua，与游戏内置更新器保持一致：
 //
 //	POST {site}commits            {"commit_hash":"<40位>"} -> {commits, added_or_modified_files, deleted_files, master_commit_hash}
 //	GET  {site}file?file=<path>   取任意仓库文件（相对安装根目录）

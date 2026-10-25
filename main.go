@@ -1,5 +1,8 @@
 // krd-updater：王国保卫战 Dove 版增量更新器。
 //
+// 这是 KingdomRushDove（https://github.com/CrazySpottedDove/KingdomRushDove）的第三方更新器，
+// 与游戏本体分开维护，不代表上游。协议细节见 internal/remote。
+//
 // 服务端协议跟游戏内置更新器一致，只是把检查、下载、落地拆成了独立命令：
 // 不带参数打开图形界面，带参数按子命令执行。
 package main
@@ -42,7 +45,7 @@ const (
 	exitApply      = 8
 )
 
-const helpText = `krd-updater %s：王国保卫战 Dove 版增量更新器
+const helpText = `krd-updater %s：王国保卫战 Dove 版增量更新器（第三方，非官方）
 
 用法：
   krd-updater                          打开图形界面（双击即可用）
@@ -79,6 +82,8 @@ update/check 专用：
   KRD_SKIP_ASSETS KRD_DELETE_REMOVED KRD_BACKUP KRD_BACKUP_DIR KRD_TEMP_DIR
   KRD_LOG_FILE KRD_PROXY KRD_USER_AGENT KRD_PROGRESS KRD_JSON KRD_YES
   KRD_VERBOSE KRD_ELEVATE KRD_INSECURE_TLS KRD_MAX_BUNDLE_FILES
+
+项目与说明：https://github.com/AutumnPizazz/KingdomRushDove-updater
 
 退出码：0 成功/已最新  2 用法错误  3 配置错误  4 网络错误  5 安装目录错误
         6 权限不足  7 下载失败  8 落地失败

@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要发布的 tag，例如 v1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  GOTOOLCHAIN: local
+  CGO_ENABLED: 0
+
+jobs:
+  release:
+    name: 编译并发版
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: 取版本号
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then tag="${{ inputs.tag }}"; fi
+          echo "TAG=${tag}" >> "$GITHUB_ENV"
+          echo "VERSION=${tag#v}" >> "$GITHUB_ENV"
+      - name: 测试
+        run: go test ./...
+      - name: 编译
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          LDFLAGS="-s -w -X main.Version=${VERSION}"
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater.exe .
+          GOOS=windows GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-arm64.exe .
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-linux .
+          GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-linux-arm64 .
+          GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-macos .
+      - name: 打包
+        run: |
+          set -euo pipefail
+          cd dist
+          cp ../krd-updater.example.jsonc .
+          # 有 zip 命令就用它，没有就退回 Python 的 zipfile，省得 runner 缺包时卡住
+          pack_zip() {
+            if command -v zip >/dev/null 2>&1; then zip -q "$@"; else python3 -m zipfile -c "$@"; fi
+          }
+          pack_zip "krd-updater-${VERSION}-windows-amd64.zip" krd-updater.exe krd-updater.example.jsonc
+          pack_zip "krd-updater-${VERSION}-windows-arm64.zip" krd-updater-arm64.exe krd-updater.example.jsonc
+          tar -czf "krd-updater-${VERSION}-linux-amd64.tar.gz" krd-updater-linux krd-updater.example.jsonc
+          tar -czf "krd-updater-${VERSION}-linux-arm64.tar.gz" krd-updater-linux-arm64 krd-updater.example.jsonc
+          tar -czf "krd-updater-${VERSION}-macos-arm64.tar.gz" krd-updater-macos krd-updater.example.jsonc
+          sha256sum *.zip *.tar.gz > SHA256SUMS.txt
+          ls -l
+      - name: 发 Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.zip dist/*.tar.gz dist/SHA256SUMS.txt --clobber
+          else
+            gh release create "$TAG" dist/*.zip dist/*.tar.gz dist/SHA256SUMS.txt \
+              --title "krd-updater $VERSION" \
+              --notes "王国保卫战 Dove 版更新器 $VERSION。Windows 用户下 \`krd-updater-${VERSION}-windows-amd64.zip\`，解压后双击 exe 即可。"
+          fi

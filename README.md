@@ -1,13 +1,18 @@
 # 王国保卫战 Dove 版更新器
 
+这是 [KingdomRushDove](https://github.com/CrazySpottedDove/KingdomRushDove) 的第三方更新器，
+自带更新器的增强版。跟游戏本体不是一个仓库，有问题找这里，别去找游戏作者。
+
 把游戏目录更新到服务端最新版本。程序是一个 exe，双击就能用，不需要装运行库。
+下载在 [Releases](https://github.com/AutumnPizazz/KingdomRushDove-updater/releases)。
 
 更新方式跟游戏自带更新器一样：代码按提交差异同步，图片和音频按 `_assets/assets_index.lua`
 里记的大小和哈希逐个比对，只下载变了的文件。
 
 ## 用 exe 更新
 
-1. 双击 `krd-updater.exe`。浏览器会自动打开设置页。
+1. 从 Releases 下 `krd-updater-<版本>-windows-amd64.zip`，解压到任意目录，
+   双击 `krd-updater.exe`。浏览器会自动打开设置页。
 2. 看「安装目录」对不对。要选到含 `main.lua` 和 `_assets` 的那一层，拿不准就点「探测」。
 3. 点「检查更新」，看提示里有多少文件要变，再点「开始更新」。
 4. 更新前退出游戏。`love.exe` 还开着的话文件写不进去。
@@ -115,6 +120,19 @@ CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -o krd-updater.exe .
 依赖只有一个 `github.com/tailscale/hujson`，用于解析 JSONC，已经放在 `vendor/`。
 平时编译不联网。
 
+### 自动化
+
+`.github/workflows/ci.yml` 在 push 到 `main` 和 PR 时跑：格式检查、`go vet`、Windows 目标的
+vet、单元测试，再把五个平台的目标交叉编译一遍并存成 artifact。
+
+`.github/workflows/release.yml` 在打 `v*` tag 时触发，编译后打包 zip 与 tar.gz，
+生成 `SHA256SUMS.txt`，用 `gh release create` 发到 Releases：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
 ### 拉不到模块时
 
 `vendor/` 齐全时不需要联网。只有升级依赖（`go get`、`go mod tidy`）才要下载。
@@ -203,3 +221,17 @@ internal/ui             进度输出
 | 关掉网页后还想再开 | 重新双击 exe，会起一个新的后台进程和端口 |
 | 后台进程停不下来 | 点页面「退出程序」，或用任务管理器结束 `krd-updater.exe` |
 | 版本标记丢了 | `krd-updater set-hash <提交号>`，提交号看服务端 `commits` 接口或发布页 |
+
+## 来源与范围
+
+这个项目是 [KingdomRushDove](https://github.com/CrazySpottedDove/KingdomRushDove) 的第三方更新器，
+补的是自带更新器缺的几样：多更新源、断点续传、资源校验、整目录批量比对、可视化配置。
+
+- 不包含上游的游戏资源，运行起来只从更新源拉文件。
+- 不改游戏的 Lua 代码，文件清单和落地方式跟服务端保持一致。
+- 服务端协议和资源哈希算法照着上游 `dove_modules/updater/update_manager.lua` 实现的，
+  上游改了协议这里会失效，需要跟着改。
+- 不是官方项目，与游戏作者无关。
+
+本仓库：<https://github.com/AutumnPizazz/KingdomRushDove-updater>
+上游：<https://github.com/CrazySpottedDove/KingdomRushDove>

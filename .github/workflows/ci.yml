@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+  CGO_ENABLED: 0
+
+jobs:
+  test:
+    name: 测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: 检查格式
+        run: |
+          out=$(gofmt -l . | grep -v '^vendor/' || true)
+          if [ -n "$out" ]; then
+            echo "这些文件没格式化，跑 gofmt -w 修一下："
+            echo "$out"
+            exit 1
+          fi
+      - name: vet
+        run: go vet ./...
+      - name: vet（Windows 目标）
+        run: GOOS=windows go vet ./...
+      - name: 单元测试
+        run: go test ./...
+
+  build:
+    name: 交叉编译
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: 编译五个目标
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          LDFLAGS="-s -w -X main.Version=0.0.0-${GITHUB_SHA::7}"
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater.exe .
+          GOOS=windows GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-arm64.exe .
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-linux .
+          GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-linux-arm64 .
+          GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags "$LDFLAGS" -o dist/krd-updater-macos .
+          ls -l dist
+      - name: 试运行
+        run: |
+          chmod +x dist/krd-updater-linux
+          ./dist/krd-updater-linux --version
+          ./dist/krd-updater-linux --help >/dev/null
+      - uses: actions/upload-artifact@v4
+        with:
+          name: krd-updater-binaries
+          path: dist/*
+          retention-days: 7
+          if-no-files-found: error
