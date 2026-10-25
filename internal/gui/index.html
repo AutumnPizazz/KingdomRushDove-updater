@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>王国保卫战 Dove 版 更新器</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2c; --panel2:#1d2637; --line:#2a3550;
+    --fg:#e6ebf5; --dim:#93a0bb; --accent:#4f8cff; --ok:#3ddc97; --warn:#ffb454; --err:#ff6b6b;
+  }
+  @media (prefers-color-scheme: light){
+    :root{--bg:#f4f6fb; --panel:#fff; --panel2:#f0f3fa; --line:#d8e0f0; --fg:#1b2233; --dim:#5d6b88;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.6 "Microsoft YaHei","PingFang SC",system-ui,sans-serif}
+  header{padding:18px 24px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+  header h1{font-size:17px;margin:0;font-weight:600}
+  .tag{font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:999px;padding:1px 10px}
+  main{max-width:1080px;margin:0 auto;padding:20px 24px 40px;display:grid;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h2{font-size:14px;margin:0 0 12px;color:var(--dim);font-weight:600;letter-spacing:.04em}
+  .row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+  .row > label{color:var(--dim);font-size:13px}
+  input[type=text],input[type=number],textarea,select{
+    width:100%;background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font:inherit;outline:none}
+  input:focus,textarea:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:64px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+  .chk{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);
+       border-radius:8px;padding:8px 10px;cursor:pointer;user-select:none}
+  .chk input{accent-color:var(--accent)}
+  .hint{color:var(--dim);font-size:12px;margin-top:-4px;margin-bottom:10px}
+  .buttons{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;border-radius:9px;padding:9px 16px;border:1px solid var(--line);
+         background:var(--panel2);color:var(--fg);cursor:pointer;transition:.15s}
+  button:hover{border-color:var(--accent)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+  button.primary:disabled,button:disabled{opacity:.45;cursor:not-allowed}
+  button.ghost{background:transparent}
+  #status{margin-left:auto;font-size:13px;color:var(--dim)}
+  #status.ok{color:var(--ok)} #status.err{color:var(--err)} #status.warn{color:var(--warn)}
+  #log{background:#0a0e17;color:#cfd8ea;border:1px solid var(--line);border-radius:10px;
+       padding:12px;height:300px;overflow:auto;font:12.5px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap}
+  @media (prefers-color-scheme: light){#log{background:#0f1420}}
+  .kbd{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--dim)}
+  .split{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}
+  @media (max-width:860px){.split{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+  .plan{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--dim)}
+  .plan b{color:var(--fg);font-weight:600}
+  details summary{cursor:pointer;color:var(--dim);font-size:13px;margin-bottom:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>王国保卫战 Dove 版 · 更新器</h1>
+  <span class="tag" id="ver">版本 —</span>
+  <span class="tag" id="hash">提交 —</span>
+</header>
+
+<main>
+  <div class="split">
+    <section class="card">
+      <h2>安装位置</h2>
+      <div class="row">
+        <label>安装目录</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="install_dir" placeholder="D:\Program Files\王国保卫战Dove版\KingdomRushDove">
+          <button class="ghost" id="btn-detect" title="在常见位置查找">探测</button>
+        </div>
+      </div>
+      <div class="hint">选到含 <span class="kbd">main.lua</span> 与 <span class="kbd">_assets</span> 的那一层。</div>
+
+      <h2 style="margin-top:16px">更新源</h2>
+      <textarea id="sites" rows="3" spellcheck="false"></textarea>
+      <div class="hint">一行一个，按顺序探测，第一个可用的胜出。</div>
+
+      <h2 style="margin-top:16px">网络</h2>
+      <div class="grid3">
+        <div><label class="hint">超时（秒）</label><input type="number" id="timeout_seconds" min="5" max="600"></div>
+        <div><label class="hint">重试次数</label><input type="number" id="retries" min="0" max="20"></div>
+        <div><label class="hint">并发下载</label><input type="number" id="parallel_downloads" min="1" max="16"></div>
+      </div>
+      <div class="row" style="margin-top:10px">
+        <label>HTTP 代理</label>
+        <input type="text" id="proxy" placeholder="留空 = 跟随系统/环境变量，例如 http://127.0.0.1:7890">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>更新行为</h2>
+      <div class="checks">
+        <label class="chk"><input type="checkbox" id="skip_assets"><span>只更新代码/数据</span></label>
+        <label class="chk"><input type="checkbox" id="delete_removed"><span>删除废弃文件</span></label>
+        <label class="chk"><input type="checkbox" id="backup_enabled"><span>覆盖前备份</span></label>
+        <label class="chk"><input type="checkbox" id="elevate"><span>自动请求管理员权限</span></label>
+        <label class="chk"><input type="checkbox" id="verbose"><span>详细日志</span></label>
+        <label class="chk"><input type="checkbox" id="keep_temp"><span>保留临时文件</span></label>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <label>备份目录</label>
+        <input type="text" id="backup_dir" placeholder="留空 = 安装目录旁 KRD_backup_时间">
+      </div>
+      <details>
+        <summary>更多设置</summary>
+        <div class="row"><label>临时目录</label><input type="text" id="temp_dir" placeholder="留空 = 系统临时目录"></div>
+        <div class="row"><label>日志文件</label><input type="text" id="log_file" placeholder="留空 = 只显示在这里"></div>
+        <div class="row"><label>配置文件</label><input type="text" id="config_path" placeholder="保存位置，默认 krd-updater.jsonc"></div>
+      </details>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="buttons">
+      <button class="primary" id="btn-check">检查更新</button>
+      <button id="btn-update" disabled>开始更新</button>
+      <button id="btn-verify">校验资源</button>
+      <button class="ghost" id="btn-save">保存配置</button>
+      <button class="ghost" id="btn-quit" title="关掉程序，页面会断开">退出程序</button>
+      <span id="status">就绪</span>
+    </div>
+    <div class="plan" id="plan" style="margin-top:12px"></div>
+  </section>
+
+  <section class="card">
+    <h2>运行日志</h2>
+    <div id="log"></div>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const logBox = $("log");
+let lastSeq = 0, pollTimer = null, currentPlan = null;
+
+function setStatus(text, kind=""){
+  const el = $("status");
+  el.textContent = text;
+  el.className = kind;
+}
+function appendLog(lines){
+  for (const ln of lines){
+    logBox.textContent += ln.text + "\n";
+  }
+  if (lines.length){ logBox.scrollTop = logBox.scrollHeight; }
+}
+function fmtBytes(n){
+  if (!n) return "0 B";
+  const u=["B","KB","MB","GB"]; let i=0, v=n;
+  while (v>=1024 && i<u.length-1){ v/=1024; i++; }
+  return v.toFixed(v<10&&i>0?1:0)+" "+u[i];
+}
+
+function collect(){
+  return {
+    install_dir: $("install_dir").value.trim(),
+    sites: $("sites").value.split("\n").map(s=>s.trim()).filter(Boolean),
+    timeout_seconds: +$("timeout_seconds").value || 60,
+    retries: +$("retries").value || 0,
+    parallel_downloads: +$("parallel_downloads").value || 4,
+    proxy: $("proxy").value.trim(),
+    skip_assets: $("skip_assets").checked,
+    delete_removed: $("delete_removed").checked,
+    backup: { enabled: $("backup_enabled").checked, dir: $("backup_dir").value.trim() },
+    elevate: $("elevate").checked,
+    verbose: $("verbose").checked,
+    keep_temp: $("keep_temp").checked,
+    temp_dir: $("temp_dir").value.trim(),
+    log_file: $("log_file").value.trim(),
+    progress: "none",
+  };
+}
+
+function fill(c){
+  $("install_dir").value = c.install_dir || "";
+  $("sites").value = (c.sites||[]).join("\n");
+  $("timeout_seconds").value = c.timeout_seconds ?? 60;
+  $("retries").value = c.retries ?? 4;
+  $("parallel_downloads").value = c.parallel_downloads ?? 4;
+  $("proxy").value = c.proxy || "";
+  $("skip_assets").checked = !!c.skip_assets;
+  $("delete_removed").checked = c.delete_removed !== false;
+  $("backup_enabled").checked = !!(c.backup && c.backup.enabled);
+  $("backup_dir").value = (c.backup && c.backup.dir) || "";
+  $("elevate").checked = c.elevate !== false;
+  $("verbose").checked = !!c.verbose;
+  $("keep_temp").checked = !!c.keep_temp;
+  $("temp_dir").value = c.temp_dir || "";
+  $("log_file").value = c.log_file || "";
+}
+
+async function loadConfig(){
+  const r = await fetch("/api/config");
+  const j = await r.json();
+  if (!j.ok) { setStatus("读取配置失败: " + j.error, "err"); return; }
+  fill(j.config);
+  $("config_path").value = j.config_path || "";
+  $("ver").textContent = "版本 " + (j.version || "未知");
+  $("hash").textContent = "提交 " + (j.local_hash || "缺少标记");
+}
+
+async function call(path, body){
+  const r = await fetch(path, {method:"POST", headers:{"Content-Type":"application/json"},
+                               body: JSON.stringify(body || {})});
+  let j = null;
+  try { j = await r.json(); } catch(e) { j = {ok:false, error:"服务端返回异常"}; }
+  if (!r.ok && j && !j.error) j.error = "HTTP " + r.status;
+  return j;
+}
+
+function renderPlan(j){
+  if (!j.ok) return;
+  $("ver").textContent = "版本 " + ($("ver").textContent.replace(/^版本 /,""));
+  const parts = [];
+  parts.push(`<span>站点 <b>${j.site}</b></span>`);
+  parts.push(`<span>本地 <b>${(j.local_hash||"").slice(0,8)}</b></span>`);
+  parts.push(`<span>服务端 <b>${(j.remote_hash||"").slice(0,8)}</b></span>`);
+  if (j.up_to_date){
+    parts.push(`<span style="color:var(--ok)">已是最新</span>`);
+  } else {
+    parts.push(`<span>代码 <b>${j.code_files}</b></span>`);
+    if ($("skip_assets").checked){
+      parts.push(`<span style="color:var(--warn)">资源已跳过</span>`);
+    } else {
+      parts.push(`<span>资源 <b>${j.asset_files}</b> 个 / <b>${fmtBytes(j.asset_bytes)}</b></span>`);
+    }
+    if (j.deleted) parts.push(`<span>删除 <b>${j.deleted}</b></span>`);
+    if (j.commits && j.commits.length){
+      const msgs = j.commits.map(c => "· " + String(c.message||"").split("\n")[0]).join("<br>");
+      parts.push(`<span style="flex-basis:100%">待更新提交 ${j.commits.length} 条：<br>${msgs}</span>`);
+    }
+  }
+  $("plan").innerHTML = parts.join("");
+  $("btn-update").disabled = !!(j.up_to_date);
+  currentPlan = j;
+}
+
+function startPoll(){
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    const r = await fetch("/api/log?after=" + lastSeq);
+    const j = await r.json();
+    if (j.lines && j.lines.length){
+      appendLog(j.lines);
+      lastSeq = j.seq;
+    }
+    if (!j.running){
+      clearInterval(pollTimer); pollTimer = null;
+      const s = await (await fetch("/api/state")).json();
+      setButtons(true);
+      if (s.error){ setStatus("失败: " + s.error, "err"); $("btn-update").disabled = false; }
+      else if (s.result){ setStatus("更新完成", "ok"); $("btn-update").disabled = true; }
+      else { setStatus("就绪"); }
+    }
+  }, 700);
+}
+
+function setButtons(enabled){
+  for (const id of ["btn-check","btn-update","btn-verify","btn-save"]){
+    const b = $(id);
+    if (id === "btn-update"){
+      b.disabled = !enabled || !currentPlan || currentPlan.up_to_date;
+    } else {
+      b.disabled = !enabled;
+    }
+  }
+}
+
+$("btn-detect").onclick = async () => {
+  setStatus("正在探测安装目录……");
+  const j = await (await fetch("/api/detect")).json();
+  if (j.found && j.found.length){
+    $("install_dir").value = j.found[0];
+    setStatus("已找到: " + j.found[0], "ok");
+  } else {
+    setStatus("常见位置没找到，请手动选择安装目录", "warn");
+  }
+};
+
+$("btn-check").onclick = async () => {
+  setButtons(false); setStatus("正在检查更新……");
+  appendLog([{text:"— 检查更新 —"}]);
+  startPoll();
+  const j = await call("/api/check", {config: collect()});
+  if (!j.ok){ setStatus("检查失败: " + j.error, "err"); setButtons(true); return; }
+  renderPlan(j);
+  setStatus(j.up_to_date ? "已是最新版本" : "发现新版本", j.up_to_date ? "ok" : "warn");
+};
+
+$("btn-update").onclick = async () => {
+  if (!confirm("确定开始更新？游戏请先关闭。")) return;
+  setButtons(false); setStatus("正在更新……");
+  appendLog([{text:"— 开始更新 —"}]);
+  startPoll();
+  const j = await call("/api/update", {config: collect()});
+  if (!j.ok){ setStatus("无法开始: " + j.error, "err"); setButtons(true); }
+};
+
+$("btn-verify").onclick = async () => {
+  setButtons(false); setStatus("正在校验资源……");
+  startPoll();
+  const j = await call("/api/verify", {config: collect()});
+  if (!j.ok){ setStatus("校验失败: " + j.error, "err"); }
+  else if (j.bad && j.bad.length){ setStatus(`发现 ${j.bad.length} 个异常资源`, "warn"); }
+  else { setStatus(`校验通过（${j.checked} 个）`, "ok"); }
+  setButtons(true);
+};
+
+$("btn-save").onclick = async () => {
+  const path = $("config_path").value.trim();
+  const j = await call("/api/config", {config: collect(), path: path});
+  if (!j.ok){ setStatus("保存失败: " + j.error, "err"); return; }
+  $("config_path").value = j.config_path;
+  setStatus("配置已保存: " + j.config_path, "ok");
+};
+
+$("btn-quit").onclick = async () => {
+  if (!confirm("退出后这个页面就不能用了，需要重新双击程序才能打开。继续？")) return;
+  setButtons(false);
+  setStatus("程序已退出，可以关掉这个页面", "ok");
+  try { await fetch("/api/quit", {method:"POST"}); } catch (e) {}
+};
+
+// 页面活着就每 15 秒报一次；关掉标签页时发一次 bye，程序 2 秒后退出。
+// 用 sendBeacon 是因为页面卸载时普通 fetch 会被浏览器掐掉。刷新页面时，
+// 新页面会立刻发请求，程序收到后取消这次退出。
+setInterval(() => { fetch("/api/heartbeat", {method:"POST", keepalive:true}).catch(()=>{}); }, 15000);
+window.addEventListener("pagehide", () => {
+  try { navigator.sendBeacon("/api/bye", ""); } catch (e) {}
+});
+
+loadConfig().then(() => {
+  startPoll();
+  fetch("/api/heartbeat", {method:"POST"}).catch(()=>{});
+  fetch("/api/log?after=0").then(r=>r.json()).then(j=>{
+    if (j.lines) { appendLog(j.lines); lastSeq = j.seq; }
+  });
+});
+</script>
+</body>
+</html>

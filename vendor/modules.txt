@@ -1,0 +1,3 @@
+# github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
+## explicit; go 1.26
+github.com/tailscale/hujson
